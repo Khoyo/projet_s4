@@ -3,35 +3,70 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <err.h>
 
-int main(int argc, char* argv[]) {
+/* pwd_create_hash()
+ * IN  username : name of the user, must be 16 char or less
+ * IN  clear_password : password of the user, not encrypted yet
+ * OUT hash : pointer to the hash of the password
+ *
+ * return int : if error : -1, else 0 */
+int pwd_create_hash(char* username, char* clear_password, char** hash)
+{
+  int errval = -1; // error value
+  size_t username_len = 0;
+  char* salt = NULL;
+  char* tmp_hash = NULL; // tmp hash if crypt fail
 
-  if (argc > 3) {
-    printf("You must enter 2 arguments : \n- Your username\n- Your password\n");
-    return 1;
-  }
-
-  char* pwd = argv[2];
-  char* salt = malloc(sizeof(char) * strlen(argv[1]) + 5);
-  char* hash = NULL;
-
-  sprintf(salt, "$6$%s$", argv[1]);
-  
-  char* old_hash = "$6$max$pqC9cKzGf9GnGLGdj2ZMMzUqtvr2fTFLlORBAvALAfAcPsvsGSEy2r21CVWbBuLzjWLx87xAykql59ERUDMqu0%";
-
-  hash = crypt(pwd, salt);
-
-  
-
-  if (hash) 
+  username_len = strlen(username);
+  if (username_len > 16)
   {
-    if (strlen(hash) == strlen(old_hash) && strcmp(hash, old_hash))
-      printf("you logged in :DDD");
-    else
-      printf("you didnt logged in DDD:");
+    warnx("The username must not have more than 16 charracters.");
+    return -1;
   }
-  else
-    return 1;
 
+  salt = malloc(sizeof(char) * (username_len + 5));
+  if (salt == NULL)
+  {
+    warnx("Malloc failed");
+    return -1;
+  }
+
+  errval = sprintf(salt, "$6$%s$", username);
+  if (errval < 0)
+  {
+    warnx("sprintf failed");
+    return -1;
+  }
+  
+  tmp_hash = crypt(clear_password, salt);
+  if (tmp_hash == NULL)
+  {
+    warnx("crypt failed");
+    return -1;
+  }
+  else // crypt() didnt fail, so we can modify "hash"
+  {
+    *hash = tmp_hash;
+  }
+
+  free(salt);
   return 0;
 }
+
+int main() 
+{
+  char* username = "Max";
+  char* clear_password = "kek";
+  char* hash = NULL;
+
+  if ( pwd_create_hash(username, clear_password, &hash) == -1 )
+  {
+    printf("failed D:");
+    return 1;
+  }
+
+  printf("Hash : %s", hash);
+  return 0;
+}
+
