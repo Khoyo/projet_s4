@@ -1,17 +1,18 @@
-# define _DEFAULT_SOURCE
-# define _XOPEN_SOURCE 600
-# include <stdlib.h>
-# include <unistd.h>
-# include <fcntl.h>
-# include <err.h>
-# include <sys/types.h>
-# include <sys/stat.h>
-# include <fcntl.h>
-# include <stdio.h>
-# include <sys/ioctl.h>
-# include <termios.h>
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 600
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <err.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
+#include <termios.h>
 
-# define BUFF_SIZE 150
+#define BUFF_SIZE 1024
 
 void oussh_openPt(int flags, int* fdm, int* fds) {
 
@@ -53,23 +54,40 @@ int main() {
     ssize_t ioerr = -1;
 
     close(fds);
+    fd_set fd_in;
 
     while (1) {
+      FD_ZERO(&fd_in);
+      FD_SET(0, &fd_in);
+      FD_SET(fdm, &fd_in);
 
-      write(STDOUT_FILENO, "Input : ", sizeof("Input : "));
+      if(select(fdm+1, &fd_in, NULL, NULL, NULL) == -1)
+      {
+        err(3, "I/O error");
+      }
+      else
+      {
+        if(FD_ISSET(fdm, &fd_in))
+        {
+          //write(STDOUT_FILENO, "  $", sizeof("Input : "));
+          ioerr = read(fdm, buffer, BUFF_SIZE - 1);
+          if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
-      ioerr = read(STDIN_FILENO, buffer, BUFF_SIZE);
-      if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
+          buffer[ioerr] = '\0';
+          fprintf(stderr,"%s", buffer);
+        }
+        if(FD_ISSET(0, &fd_in))
+        {
+          ioerr = read(STDIN_FILENO, buffer, BUFF_SIZE);
+          if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
-      ioerr = write(fdm, buffer, BUFF_SIZE);
-      if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
-
-      ioerr = read(fdm, buffer, BUFF_SIZE - 1);
-      if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
-
-      buffer[BUFF_SIZE - 1] = '\0';
-      fprintf(stderr,"%s", buffer);
+          ioerr = write(fdm, buffer, ioerr);
+          if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
+        }
+      }
     }
+
+
   }
   else {
 
@@ -99,12 +117,17 @@ int main() {
     dup(fds); // PTY becomes standard output (1)
     dup(fds); // PTY becomes standard error (2)
 
+
+    setsid();
+    ioctl(0, TIOCSCTTY,1);
+
+    execlp("sh", NULL);
+
     while (1) {
 
       ioerr = read(fds, buffer, BUFF_SIZE - 1);
       if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
-
-      buffer[BUFF_SIZE - 1] = '\0';
+      buffer[ioerr] = '\0';
 
       printf("Child receve : %s", buffer);
     }
