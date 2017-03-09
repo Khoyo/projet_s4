@@ -83,7 +83,7 @@ int main() {
       {
         if(FD_ISSET(fdm, &fd_in))
         {
-          write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
+          //write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
           ioerr = read(fdm, buffer, BUFF_SIZE - 1);
 
           if (ioerr < 0)
