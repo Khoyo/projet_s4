@@ -35,23 +35,37 @@ void oussh_openPt(int flags, int* fdm, int* fds) {
 
 int main() {
 
+  //FUCKING SET THE PARENT TERMINAL TO RAW AND NOECHO
+
+  int log_fd;
   int fdm = -1; // master's file descriptor
   int fds = -1; // slave's file descriptor
 
-  oussh_openPt(O_RDWR, &fdm, &fds);    
+  oussh_openPt(O_RDWR, &fdm, &fds);
 
   pid_t pid = fork();
 
   if (pid < 0) {
 
-    errx(EXIT_FAILURE, "main : fork failed"); 
+    errx(EXIT_FAILURE, "main : fork failed");
   }
   else if (pid != 0) {
 
     // FATHER - MASTER
-
+    struct termios master_orig_term_settings; // Saved terminal settings
+    struct termios new_term_settings; // Current terminal settings
     char buffer[BUFF_SIZE];
     ssize_t ioerr = -1;
+
+    log_fd = open("log.txt", O_APPEND|O_CREAT|O_RDWR);
+
+    // Save the default parameters of the slave side of the PTY
+    ioerr = tcgetattr(0, &master_orig_term_settings);
+
+    // Set raw mode on the slave side of the PTY
+    new_term_settings = master_orig_term_settings;
+    cfmakeraw(&new_term_settings);
+    tcsetattr(0, TCSANOW, &new_term_settings);
 
     close(fds);
     fd_set fd_in;
@@ -69,9 +83,14 @@ int main() {
       {
         if(FD_ISSET(fdm, &fd_in))
         {
-          //write(STDOUT_FILENO, "  $", sizeof("Input : "));
+          write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
           ioerr = read(fdm, buffer, BUFF_SIZE - 1);
-          if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
+
+          if (ioerr < 0)
+          {
+            tcsetattr(0, TCSANOW, &master_orig_term_settings);
+            errx(EXIT_FAILURE, "main : read failed");
+          }
 
           buffer[ioerr] = '\0';
           fprintf(stderr,"%s", buffer);
@@ -81,6 +100,8 @@ int main() {
           ioerr = read(STDIN_FILENO, buffer, BUFF_SIZE);
           if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
+          write(log_fd, buffer, ioerr);
+          fsync(log_fd);
           ioerr = write(fdm, buffer, ioerr);
           if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
         }
@@ -104,7 +125,7 @@ int main() {
 
     // Set raw mode on the slave side of the PTY
     new_term_settings = slave_orig_term_settings;
-    cfmakeraw (&new_term_settings);
+    //cfmakeraw (&new_term_settings);
     tcsetattr (fds, TCSANOW, &new_term_settings);
 
     close(fdm);
@@ -120,8 +141,9 @@ int main() {
 
     setsid();
     ioctl(0, TIOCSCTTY,1);
+    close(fds);
 
-    execlp("sh", NULL);
+    execlp("bash", NULL);
 
     while (1) {
 
