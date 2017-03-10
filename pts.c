@@ -14,6 +14,7 @@
 
 #define BUFF_SIZE 1024
 
+
 void oussh_openPt(int flags, int* fdm, int* fds) {
 
   *fdm = -1;
@@ -44,6 +45,9 @@ int main() {
   oussh_openPt(O_RDWR, &fdm, &fds);
 
   pid_t pid = fork();
+  struct winsize ws;
+  ioctl(0, TIOCGWINSZ, &ws);
+  ioctl(fdm, TIOCSWINSZ, &ws);
 
   if (pid < 0) {
 
@@ -89,7 +93,9 @@ int main() {
           if (ioerr < 0)
           {
             tcsetattr(0, TCSANOW, &master_orig_term_settings);
-            errx(EXIT_FAILURE, "main : read failed");
+            //err(EXIT_FAILURE, "main : read failed");
+            printf("oussh: Exiting\n");
+            exit(0);
           }
 
           buffer[ioerr] = '\0';
