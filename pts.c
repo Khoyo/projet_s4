@@ -11,9 +11,31 @@
 #include <sys/select.h>
 #include <sys/ioctl.h>
 #include <termios.h>
+#include <signal.h>
+#include <errno.h>
 
 #define BUFF_SIZE 1024
 
+int fdm = -1; // master's file descriptor
+
+static void sigwinch_handler(int signum)
+{
+  struct winsize ws;
+  ioctl(0, TIOCGWINSZ, &ws);
+  ioctl(fdm, TIOCSWINSZ, &ws);
+}
+
+void reg_winchange_handler()
+{
+  struct sigaction sa;
+  sa.sa_handler = sigwinch_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART; /* Restart functions if
+                               interrupted by handler */
+  if (sigaction(SIGWINCH, &sa, NULL) == -1)
+    err(5, "Can't set signal handler");
+
+}
 
 void oussh_openPt(int flags, int* fdm, int* fds) {
 
@@ -36,10 +58,9 @@ void oussh_openPt(int flags, int* fdm, int* fds) {
 
 int main() {
 
-  //FUCKING SET THE PARENT TERMINAL TO RAW AND NOECHO
+  //SET THE PARENT TERMINAL TO RAW AND NOECHO
 
   int log_fd;
-  int fdm = -1; // master's file descriptor
   int fds = -1; // slave's file descriptor
 
   oussh_openPt(O_RDWR, &fdm, &fds);
@@ -61,6 +82,8 @@ int main() {
     char buffer[BUFF_SIZE];
     ssize_t ioerr = -1;
 
+    reg_winchange_handler();
+
     log_fd = open("log.txt", O_APPEND|O_CREAT|O_RDWR);
 
     // Save the default parameters of the slave side of the PTY
@@ -81,7 +104,8 @@ int main() {
 
       if(select(fdm+1, &fd_in, NULL, NULL, NULL) == -1)
       {
-        err(3, "I/O error");
+        if(errno != ERESTART && errno != EINTR)
+          err(3, "I/O error");
       }
       else
       {
