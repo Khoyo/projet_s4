@@ -7,7 +7,7 @@
 #include <err.h>
 #include <crypt.h>
 
-static char* get_crypt_hash(char* pwd, char* salt) 
+static char* get_crypt_hash(const char* pwd, const char* salt) 
 {
   char* tmp = NULL;
   size_t tmp_len = 0;
@@ -35,7 +35,9 @@ static char* get_crypt_hash(char* pwd, char* salt)
   return hash;
 }
 
-char* pwd_get_hash(char* username, char* clear_pwd)
+// USERNAME MUST NOT CONTAINS SPACES 
+// (or other char used as separator in the hash_file)
+char* pwd_get_hash(const char* username, const char* clear_pwd)
 {
   size_t username_len = 0;
   char* salt = NULL; // used with crypt()
@@ -43,6 +45,8 @@ char* pwd_get_hash(char* username, char* clear_pwd)
   char* hash = NULL; // returned value
 
   username_len = strlen(username);
+  //TODO : verify that username does not contains spaces 
+  //(or other separator used in hash_file)
   if (username_len > 16)
   {
     warnx("The username must not have more than 16 char");
@@ -76,7 +80,7 @@ char* pwd_get_hash(char* username, char* clear_pwd)
   return hash;
 }
 
-int pwd_is_hash_equals(char* hash1, char* hash2)
+int pwd_is_hash_equals(const char* hash1, const char* hash2)
 {
   size_t hash1_len = strlen(hash1);
   size_t hash2_len = strlen(hash2);
@@ -89,6 +93,37 @@ int pwd_is_hash_equals(char* hash1, char* hash2)
   return !(strncmp(hash1, hash2, hash1_len));
 }
 
+int pwd_set_new_hash_in_file(const char* hash_file_path,
+                                   char* new_username,
+                                   char* new_hash)
+{
+  FILE* hash_file = fopen(hash_file_path, "a+");
+  if (hash_file == NULL)
+  {
+    warnx("fopen failed");
+    return -1;
+  }
+
+  int errval = fprintf(hash_file, "%s %s\n"); // BE CAREFUL OF THE SEPARATOR
+  if (errval < 0)
+  {
+    warnx("fprintf failed");
+    fclose(hash_file);
+    return -1;
+  }
+
+  return 0;
+}
+
+char* pwd_get_hash_form_file(const char* hash_file_path, const char* username)
+{
+  FILE* hash_file = fopen(hash_file_path, "a+");
+
+  //TODO : a-t-on besoin du username ?
+
+  fclose(hash_file);
+  return "HASH";
+}
 int main()
 {
   char* hash1 = pwd_get_hash("Max", "test1");
