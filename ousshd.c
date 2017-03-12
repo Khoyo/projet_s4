@@ -1,30 +1,14 @@
 #include "pts.h"
+#include "packet.h"
 
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#define BUFF_SIZE 1024
+#define BUFF_SIZE sizeof(struct oussh_packet)
 
 int fdm = -1; // master's file descriptor
 
-static void sigwinch_handler(int signum)
-{
-  struct winsize ws;
-  ioctl(0, TIOCGWINSZ, &ws);
-  ioctl(fdm, TIOCSWINSZ, &ws);
-}
 
-void reg_winchange_handler()
-{
-  struct sigaction sa;
-  sa.sa_handler = sigwinch_handler;
-  sigemptyset(&sa.sa_mask);
-  sa.sa_flags = SA_RESTART; /* Restart functions if
-                               interrupted by handler */
-  if (sigaction(SIGWINCH, &sa, NULL) == -1)
-    err(5, "Can't set signal handler");
-
-}
 
 int bind_and_listen(char* socket_path)
 {
@@ -106,12 +90,17 @@ void handle_connection()
         if(FD_ISSET(fdm, &fd_in))
         {
           //write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
-          ioerr = read(fdm, buffer, BUFF_SIZE - 1);
+          struct oussh_packet p;
+          p.type = OUSSH_IO;
+          ioerr = read(fdm, p.io_packet.payload, OUSSH_IO_PAYLOAD_SIZE -1);
+          p.io_packet.size = ioerr;
 
           if (ioerr < 0)
           {
             //tcsetattr(0, TCSANOW, &orig_external_term_settings);
             //err(EXIT_FAILURE, "main : read failed");
+            p.type = OUSSH_DISCONNECT;
+            write(1, &p, sizeof(p));
             fprintf(stderr, "ousshd: Exiting\n");
             close(0);
             close(1);
@@ -119,17 +108,30 @@ void handle_connection()
             exit(0);
           }
 
-          write(1, buffer, ioerr);
+          write(1, &p, sizeof(p));
         }
         if(FD_ISSET(0, &fd_in))
         {
-          ioerr = read(STDIN_FILENO, buffer, BUFF_SIZE);
+          struct oussh_packet p;
+          ioerr = read(STDIN_FILENO, &p, sizeof(p));
           if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
-          write(log_fd, buffer, ioerr);
-          fsync(log_fd);
-          ioerr = write(fdm, buffer, ioerr);
-          if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
+          if(p.type == OUSSH_IO)
+          {
+            write(log_fd, p.io_packet.payload, p.io_packet.size);
+            fsync(log_fd);
+            ioerr = write(fdm, p.io_packet.payload, p.io_packet.size);
+            if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
+          }
+          if(p.type == OUSSH_WINDOW_CHANGE)
+          {
+            struct winsize ws = p.window_change_packet.ws;
+            fprintf(stderr, "Receive WS packet, %hu, %hu\n", ws.ws_row, ws.ws_col);
+            set_term_size(fdm, p.window_change_packet.ws);
+            ioctl(fdm, TIOCSWINSZ, &ws);
+            //kill(getpid(), SIGWINCH);
+            //kill(pid, SIGWINCH);
+          }
         }
       }
     }

@@ -1,23 +1,24 @@
 
-#define OUSSH_IO_PAYLOAD_SIZE 256
+#define OUSSH_IO_PAYLOAD_SIZE 1024
 
-enum oush_packet_type
+enum oussh_packet_type
 {
   OUSSH_IO,
-  OUSSH_WINDOWS_CHANGE
-}
+  OUSSH_WINDOW_CHANGE,
+  OUSSH_DISCONNECT
+};
 
 struct oussh_packet
 {
-  enum oush_packet_type type;
-  struct oush_packet_io
+  enum oussh_packet_type type;
+  union {struct oush_packet_io
   {
     size_t size;
     char payload[OUSSH_IO_PAYLOAD_SIZE];
   } io_packet;
-  struct oush_windows_change_packet
+  struct oussh_windows_change_packet
   {
     struct winsize ws;
-  } windows_change_packet;
-
-}
+  } window_change_packet;
+  };
+};
