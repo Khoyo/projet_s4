@@ -124,6 +124,7 @@ char* pwd_get_hash_form_file(const char* hash_file_path, const char* username)
   fclose(hash_file);
   return "HASH";
 }
+
 int main()
 {
   char* hash1 = pwd_get_hash("Max", "test1");
