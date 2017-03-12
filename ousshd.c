@@ -13,7 +13,6 @@ int fdm = -1; // master's file descriptor
 int bind_and_listen(char* socket_path)
 {
   struct sockaddr_un addr;
-  char buf[100];
   int fd;
 
   //if (argc > 1) socket_path=argv[1];
@@ -62,7 +61,6 @@ void handle_connection()
   else if (pid != 0) {
 
     // FATHER - MASTER
-    char buffer[BUFF_SIZE];
     ssize_t ioerr = -1;
 
     setup_master_pt(fdm);
@@ -147,7 +145,8 @@ void handle_connection()
 
     setup_slave_pt(fds);
     close(fds);
-    execlp("bash", NULL);
+
+    execlp("bash", "bash", NULL);
 
     while (1) {
 
@@ -168,7 +167,7 @@ void handle_connection()
 
 }
 
-int main(int argc, char** argv) {
+int main() {
 
   int listen_sockfd = bind_and_listen("./unix.sock");
 

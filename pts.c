@@ -25,7 +25,7 @@ void setup_external_terminal()
 {
     struct termios new_term_settings; // Current terminal settings
 
-    int err = tcgetattr(0, &orig_external_term_settings);
+    tcgetattr(0, &orig_external_term_settings);
     new_term_settings = orig_external_term_settings;
     cfmakeraw(&new_term_settings);
     tcsetattr(0, TCSANOW, &new_term_settings);
@@ -33,6 +33,7 @@ void setup_external_terminal()
 
 void setup_master_pt(int fd)
 {
+  (void) fd;
   //As of now, no special setup required
 }
 

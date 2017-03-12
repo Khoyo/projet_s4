@@ -24,6 +24,7 @@ void send_ws_packet(int fd)
 
 static void sigwinch_handler(int signum)
 {
+  (void)signum;
   send_ws_packet(socket_fd);
 }
 
@@ -40,6 +41,7 @@ void reg_winchange_handler()
 }
 
 void sigpipe_handler(int signum){
+  (void)signum;
   tcsetattr(0, TCSANOW, &orig_external_term_settings);
   //err(EXIT_FAILURE, "main : read failed");
   fprintf(stderr, "oussh: sigppipe: exiting\n");
@@ -64,7 +66,6 @@ int main()
   socket_fd = fd;
 
   struct sockaddr_un addr;
-  char buffer[256];
 
   char socket_path[] = "unix.sock";
 
