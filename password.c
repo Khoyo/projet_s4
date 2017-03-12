@@ -80,7 +80,7 @@ char* pwd_get_hash(const char* username, const char* clear_pwd)
   return hash;
 }
 
-int pwd_is_hash_equals(const char* hash1, const char* hash2)
+static int pwd_is_str_equals(const char* hash1, const char* hash2)
 {
   size_t hash1_len = strlen(hash1);
   size_t hash2_len = strlen(hash2);
@@ -104,7 +104,8 @@ int pwd_set_new_hash_in_file(const char* hash_file_path,
     return -1;
   }
 
-  int errval = fprintf(hash_file, "%s %s\n"); // BE CAREFUL OF THE SEPARATOR
+  // TODO : carful of the separator
+  int errval = fprintf(hash_file, "%s %s\n", new_username, new_hash); 
   if (errval < 0)
   {
     warnx("fprintf failed");
@@ -115,14 +116,38 @@ int pwd_set_new_hash_in_file(const char* hash_file_path,
   return 0;
 }
 
-char* pwd_get_hash_form_file(const char* hash_file_path, const char* username)
+char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
 {
-  FILE* hash_file = fopen(hash_file_path, "a+");
+  char* hash_username = NULL;
+  char* hash = NULL;
 
-  //TODO : a-t-on besoin du username ?
+  FILE* hash_file = fopen(hash_file_path, "a+");
+  if (hash_file == NULL)
+  {
+    warnx("fopen failed");
+    return NULL;
+  }
+
+  int errval = fscanf(hash_file, "%s %s\n", hash_username, hash);
+  if (hash_username == NULL || hash == NULL)
+  {
+
+  while (errval != EOF)
+  {
+    if (pwd_is_str_equals(hash_username, username))
+    {
+      fclose(hash_file);
+      free(hash_username);
+      return hash;
+    }
+
+    errval = fscanf(hash_file, "%s %s\n", hash_username, hash);
+  }
 
   fclose(hash_file);
-  return "HASH";
+  free(hash_username);
+  warnx("username not found");
+  return NULL;
 }
 
 int main()
@@ -134,8 +159,8 @@ int main()
   warnx("hash2 = %p", hash2);
   warnx("hash2 = %s", hash2);
 
-  warnx("equal ? : %d", pwd_is_hash_equals(hash1, hash1));
-  warnx("equal ? : %d", pwd_is_hash_equals(hash1, hash2));
+  pwd_set_new_hash_in_file("password", "Max", hash1);
+  warnx("hash in file : %s", pwd_get_hash_from_file("password", "Max"));
 
   free(hash2);
   free(hash1);
