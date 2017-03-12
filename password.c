@@ -8,7 +8,7 @@
 #include <crypt.h>
 #include <errno.h>
 
-#define SALT_SIZE 17
+#define SALT_SIZE 16
 
 static char* get_crypt_hash(const char* pwd, const char* salt) 
 {
@@ -38,8 +38,14 @@ static char* get_crypt_hash(const char* pwd, const char* salt)
   return hash;
 }
 
-// USERNAME MUST NOT CONTAINS SPACES 
-// (or other char used as separator in the hash_file)
+/* pwd_get_hash()
+ * returns the hash of the given password
+ *
+ * IN username  : name of the user, associated with the hash
+ *                (16 char max, must not contains '$')
+ * IN clear_pwd : password of the user, not encrypted yet
+ *
+ * return value : hash of the password */
 char* pwd_get_hash(const char* username, const char* clear_pwd)
 {
   size_t username_len = 0;
@@ -48,8 +54,7 @@ char* pwd_get_hash(const char* username, const char* clear_pwd)
   char* hash = NULL; // returned value
 
   username_len = strlen(username);
-  //TODO : verify that username does not contains spaces 
-  //(or other separator used in hash_file)
+  //TODO : verify that username does not contains '$' 
   if (username_len > 16)
   {
     warnx("The username must not have more than 16 char");
@@ -96,7 +101,16 @@ static int pwd_is_str_equals(const char* hash1, const char* hash2)
   return !(strncmp(hash1, hash2, hash1_len));
 }
 
-int pwd_set_new_hash_in_file(const char* hash_file_path, char* new_hash)
+/* pwd_add_new_hash_in_file()
+ * add a new hash in the hash_file pointed by the path
+ *
+ * IN hash_file_path : str which contains the path to the hash_file
+ *                     (aka the file which contains hashes)
+ * IN new_hash       : hash to add to the hash_file
+ *
+ * return value      : -1 if error
+ *                      0 else */
+int pwd_add_new_hash_in_file(const char* hash_file_path, char* new_hash)
 {
   FILE* hash_file = NULL;
   int errval = -1;
@@ -120,10 +134,10 @@ int pwd_set_new_hash_in_file(const char* hash_file_path, char* new_hash)
   return 0;
 }
 
-static void fill_salt(char salt[SALT_SIZE], char* hash, size_t hash_size)
+static void fill_salt(char salt[SALT_SIZE + 1], char* hash, size_t hash_size)
 {
   size_t i = 0;
-  while (i < SALT_SIZE - 1 && i < hash_size && hash[i + 3] != '$') 
+  while (i < SALT_SIZE && i < hash_size && hash[i + 3] != '$') 
   {
     salt[i] = hash[i + 3];
     i++;
@@ -132,13 +146,21 @@ static void fill_salt(char salt[SALT_SIZE], char* hash, size_t hash_size)
   salt[i] = '\0';
 }
 
+/* pwd_get_hash_from_file()
+ * returns the hash which correspond to the given username
+ *
+ * IN hash_file_path : path to the hash_file
+ * IN username       : username which correspond to the hash that we search
+ *
+ * return value      : NULL if error or not found
+ *                     hash else */
 char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
 {
   FILE* hash_file = fopen(hash_file_path, "a+");
   char* line = NULL;
   size_t line_len = 0;
   ssize_t errval = -1;
-  char salt[SALT_SIZE];
+  char salt[SALT_SIZE + 1]; // contains salt + '\0'
 
   if (hash_file == NULL)
   {
@@ -177,7 +199,7 @@ int main()
   warnx("hash2 = %p", hash2);
   warnx("hash2 = %s", hash2);
 
-  pwd_set_new_hash_in_file("hash_file", hash1);
+  pwd_add_new_hash_in_file("hash_file", hash1);
   warnx("hash in file : %s", pwd_get_hash_from_file("hash_file", "Mx"));
 
   free(hash2);
