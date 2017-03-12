@@ -196,6 +196,13 @@ char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
   return NULL;
 }
 
+/* pwd_demo()
+ * Ask in stdin username and password, search for a matching username in
+ * hashfile, and compare the hash of the given pwd to the hash in the file
+ *
+ * return value : -1 if error
+ *                 0 if login failed
+ *                 1 if login success */
 int pwd_demo() 
 {
   char username[SALT_SIZE + 1];
