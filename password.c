@@ -6,6 +6,9 @@
 #include <string.h>
 #include <err.h>
 #include <crypt.h>
+#include <errno.h>
+
+#define SALT_SIZE 17
 
 static char* get_crypt_hash(const char* pwd, const char* salt) 
 {
@@ -93,19 +96,19 @@ static int pwd_is_str_equals(const char* hash1, const char* hash2)
   return !(strncmp(hash1, hash2, hash1_len));
 }
 
-int pwd_set_new_hash_in_file(const char* hash_file_path,
-                                   char* new_username,
-                                   char* new_hash)
+int pwd_set_new_hash_in_file(const char* hash_file_path, char* new_hash)
 {
-  FILE* hash_file = fopen(hash_file_path, "a+");
+  FILE* hash_file = NULL;
+  int errval = -1;
+
+  hash_file = fopen(hash_file_path, "a+");
   if (hash_file == NULL)
   {
     warnx("fopen failed");
     return -1;
   }
 
-  // TODO : carful of the separator
-  int errval = fprintf(hash_file, "%s %s\n", new_username, new_hash); 
+  errval = fprintf(hash_file, "%s\n", new_hash); 
   if (errval < 0)
   {
     warnx("fprintf failed");
@@ -113,40 +116,55 @@ int pwd_set_new_hash_in_file(const char* hash_file_path,
     return -1;
   }
 
+  fclose(hash_file);
   return 0;
+}
+
+static void fill_salt(char salt[SALT_SIZE], char* hash, size_t hash_size)
+{
+  size_t i = 0;
+  while (i < SALT_SIZE - 1 && i < hash_size && hash[i + 3] != '$') 
+  {
+    salt[i] = hash[i + 3];
+    i++;
+  }
+
+  salt[i] = '\0';
 }
 
 char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
 {
-  char* hash_username = NULL;
-  char* hash = NULL;
-
   FILE* hash_file = fopen(hash_file_path, "a+");
+  char* line = NULL;
+  size_t line_len = 0;
+  ssize_t errval = -1;
+  char salt[SALT_SIZE];
+
   if (hash_file == NULL)
   {
     warnx("fopen failed");
     return NULL;
   }
 
-  int errval = fscanf(hash_file, "%s %s\n", hash_username, hash);
-  if (hash_username == NULL || hash == NULL)
-  {
+  errval = getline(&line, &line_len, hash_file);
 
-  while (errval != EOF)
+  while (errval != -1)
   {
-    if (pwd_is_str_equals(hash_username, username))
+    fill_salt(salt, line, line_len);
+
+    if (pwd_is_str_equals(salt, username))
     {
       fclose(hash_file);
-      free(hash_username);
-      return hash;
+      return line;
     }
 
-    errval = fscanf(hash_file, "%s %s\n", hash_username, hash);
+    free(line);
+    line = NULL;
+    errval = getline(&line, &line_len, hash_file);
   }
+  
 
   fclose(hash_file);
-  free(hash_username);
-  warnx("username not found");
   return NULL;
 }
 
@@ -159,8 +177,8 @@ int main()
   warnx("hash2 = %p", hash2);
   warnx("hash2 = %s", hash2);
 
-  pwd_set_new_hash_in_file("password", "Max", hash1);
-  warnx("hash in file : %s", pwd_get_hash_from_file("password", "Max"));
+  pwd_set_new_hash_in_file("hash_file", hash1);
+  warnx("hash in file : %s", pwd_get_hash_from_file("hash_file", "Mx"));
 
   free(hash2);
   free(hash1);
