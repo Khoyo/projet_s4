@@ -19,5 +19,5 @@ struct oussh_packet
   {
     struct winsize ws;
   } windows_change_packet;
-  
+
 }

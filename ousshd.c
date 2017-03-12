@@ -1,5 +1,8 @@
 #include "pts.h"
 
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #define BUFF_SIZE 1024
 
 int fdm = -1; // master's file descriptor
@@ -23,10 +26,43 @@ void reg_winchange_handler()
 
 }
 
-int main() {
+int bind_and_listen(char* socket_path)
+{
+  struct sockaddr_un addr;
+  char buf[100];
+  int fd;
 
-  //SET THE PARENT TERMINAL TO RAW AND NOECHO
+  //if (argc > 1) socket_path=argv[1];
 
+  if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+    perror("socket error");
+    exit(-1);
+  }
+
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  if (*socket_path == '\0') {
+    *addr.sun_path = '\0';
+    strncpy(addr.sun_path+1, socket_path+1, sizeof(addr.sun_path)-2);
+  } else {
+    strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
+    unlink(socket_path);
+  }
+
+  if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+    perror("bind error");
+    exit(-1);
+  }
+
+  if (listen(fd, 5) == -1) {
+    perror("listen error");
+    exit(-1);
+  }
+  return fd;
+}
+
+void handle_connection()
+{
   int log_fd;
   int fds = -1; // slave's file descriptor
 
@@ -46,9 +82,7 @@ int main() {
     ssize_t ioerr = -1;
 
     setup_master_pt(fdm);
-    setup_external_terminal();
-
-    reg_winchange_handler();
+    //reg_winchange_handler();
 
     log_fd = open("log.txt", O_APPEND|O_CREAT|O_RDWR);
 
@@ -76,14 +110,16 @@ int main() {
 
           if (ioerr < 0)
           {
-            tcsetattr(0, TCSANOW, &orig_external_term_settings);
+            //tcsetattr(0, TCSANOW, &orig_external_term_settings);
             //err(EXIT_FAILURE, "main : read failed");
-            printf("oussh: Exiting\n");
+            fprintf(stderr, "ousshd: Exiting\n");
+            close(0);
+            close(1);
+            close(fdm);
             exit(0);
           }
 
-          buffer[ioerr] = '\0';
-          fprintf(stderr,"%s", buffer);
+          write(1, buffer, ioerr);
         }
         if(FD_ISSET(0, &fd_in))
         {
@@ -126,5 +162,34 @@ int main() {
 
   system("ls -l /dev/pts");
 
-  return 0;
+  exit(0);
+
+}
+
+int main(int argc, char** argv) {
+
+  int listen_sockfd = bind_and_listen("./unix.sock");
+
+  while(1)
+  {
+    int conn_fd = accept(listen_sockfd, NULL, NULL);
+    if(conn_fd == -1)
+      err(5,"couldn't accept connection");
+
+    if(fork() == 0)
+    {
+      close(0);
+      close(1);
+      //close(2);
+      dup(conn_fd);
+      dup(conn_fd);
+      //dup(conn_fd);
+      close(conn_fd);
+      handle_connection();
+    }
+    else
+      close(conn_fd);
+
+  }
+
 }
