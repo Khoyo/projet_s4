@@ -9,6 +9,7 @@
 #include <errno.h>
 
 #define SALT_SIZE 16
+#define PWD_SIZE 100
 
 static char* get_crypt_hash(const char* pwd, const char* salt) 
 {
@@ -169,6 +170,11 @@ char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
   }
 
   errval = getline(&line, &line_len, hash_file);
+  char* p = strchr(line, '\n');
+  if (p != NULL)
+  {
+    *p = '\0';
+  }
 
   while (errval != -1)
   {
@@ -190,19 +196,76 @@ char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
   return NULL;
 }
 
+int pwd_demo() 
+{
+  char username[SALT_SIZE + 1];
+  char password[PWD_SIZE + 1];
+
+  printf("Please enter your username :\n");
+  fgets(username, SALT_SIZE + 1, stdin);
+  if (username == NULL)
+  {
+    warnx("scanf failed for username");
+    return -1;
+  }
+  char* p = strchr(username, '\n');
+  if (p != NULL)
+  {
+    *p = '\0';
+  }
+
+  printf("Please enter your password :\n");
+  fgets(password, PWD_SIZE + 1, stdin);
+  if (password == NULL)
+  {
+    warnx("scanf failed for password");
+    return -1;
+  }
+  p = strchr(password, '\n');
+  if (p != NULL)
+  {
+    *p = '\0';
+  }
+
+  char* current_hash = pwd_get_hash(username, password);
+  if (current_hash == NULL)
+  {
+    printf("Incorrect input : hash failed\nClosing...\n");
+    return -1;
+  }
+
+  char* file_hash = pwd_get_hash_from_file("hash_file", username);
+  if (file_hash == NULL)
+  {
+    printf("Username not found : have you created a account ?\nClosing...\n");
+    free(current_hash);
+    return -1;
+  }
+
+  warnx("fh = %s", file_hash);
+  warnx("ch = %s", current_hash);
+  if (pwd_is_str_equals(file_hash, current_hash))
+  {
+    printf("You successfully logged in !\n");
+    free(file_hash);
+    free(current_hash);
+    return 1;
+  }
+
+  free(file_hash);
+  free(current_hash);
+  printf("Login failed");
+  return 0;
+}
+
 int main()
 {
-  char* hash1 = pwd_get_hash("Max", "test1");
-  char* hash2 = pwd_get_hash("Max", "test23");
-  warnx("hash1 = %p", hash1);
-  warnx("hash1 = %s", hash1);
-  warnx("hash2 = %p", hash2);
-  warnx("hash2 = %s", hash2);
+  char* hash = pwd_get_hash("Max", "kek");
+  pwd_add_new_hash_in_file("hash_file", hash);
+  if (pwd_demo() == 1)
+  {
+    return 0;
+  }
 
-  pwd_add_new_hash_in_file("hash_file", hash1);
-  warnx("hash in file : %s", pwd_get_hash_from_file("hash_file", "Mx"));
-
-  free(hash2);
-  free(hash1);
-  return 0;
+  return 1;
 }
