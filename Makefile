@@ -1,9 +1,7 @@
 CC=gcc
+CPPFLAGS=-MMD
 CFLAGS=-Wall -Wextra -Werror -std=c99
 LDFLAGS=-lcrypt
-
-%.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -c -o $@ $<
 
 
 all: oussh password ousshd
