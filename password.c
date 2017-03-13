@@ -1,15 +1,4 @@
-#define _XOPEN_SOURCE
-#define _GNU_SOURCE
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <err.h>
-#include <crypt.h>
-#include <errno.h>
-
-#define SALT_SIZE 16
-#define PWD_SIZE 100
+#include "password.h"
 
 static char* get_crypt_hash(const char* pwd, const char* salt) 
 {
