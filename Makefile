@@ -6,9 +6,9 @@ LDFLAGS=-lcrypt
 
 all: oussh password ousshd
 
-oussh: oussh.o pts.o
-ousshd: ousshd.o pts.o
-password: password.o
+oussh: oussh.o pts.o password.o
+ousshd: ousshd.o pts.o password.o
+password: password.o password_demo.o
 
 .PHONY: clean
 

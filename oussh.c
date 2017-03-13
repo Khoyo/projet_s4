@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 600
 #include "pts.h"
 
 #include <err.h>
@@ -59,6 +62,51 @@ void init_ws()
   }
 }
 
+void try_auth(int fd)
+{
+  char username[17];
+  char password[100];
+
+  struct oussh_packet packet;
+  packet.type = OUSSH_PWD_AUTH;
+
+  printf("Please enter your username :\n");
+  fgets(packet.pwd_auth.username, 17, stdin);
+  if (username == NULL)
+  {
+    err(3, "scanf failed for username");
+  }
+  char* p = strchr(packet.pwd_auth.username, '\n');
+  if (p != NULL)
+  {
+    *p = '\0';
+  }
+
+  printf("Please enter your password :\n");
+  fgets(packet.pwd_auth.password, 100, stdin);
+  if (password == NULL)
+  {
+    err(3, "scanf failed for password");
+  }
+  p = strchr(packet.pwd_auth.password, '\n');
+  if (p != NULL)
+  {
+    *p = '\0';
+  }
+  // Send the packet
+  write(fd, &packet, sizeof(packet));
+  // Read the reply back
+  read(fd, &packet, sizeof(packet));
+  if (packet.type != OUSSH_PWD_REPLY)
+  {
+    errx(1, "bad packet received");
+  }
+
+  if (!packet.pwd_reply.accepted)
+    errx(1, "authentification failed");
+  
+}
+
 int main()
 {
   signal(SIGPIPE, sigpipe_handler);
@@ -83,12 +131,12 @@ int main()
     exit(-1);
   }
 
+  try_auth(fd);
   //write(fd, msg, sizeof(msg));
   setup_external_terminal();
   fd_set fd_in;
   reg_winchange_handler();
   //send_ws_packet(fd);
-  //kill(getpid(), SIGWINCH);
   while(1)
   {
     FD_ZERO(&fd_in);

@@ -1,5 +1,3 @@
-#define _DEFAULT_SOURCE
-#define _XOPEN_SOURCE 600
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>

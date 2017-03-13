@@ -1,5 +1,9 @@
+#define _GNU_SOURCE
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 600
 #include "pts.h"
 #include "packet.h"
+#include "password.h"
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -44,11 +48,52 @@ int bind_and_listen(char* socket_path)
   return fd;
 }
 
+void auth_client()
+{
+  struct oussh_packet p;
+  read(1, &p, sizeof(p));
+  if(p.type != OUSSH_PWD_AUTH)
+    err(3, "bad auth packet");
+
+  char* current_hash = pwd_get_hash(p.pwd_auth.username, p.pwd_auth.password);
+  if (current_hash == NULL)
+  {
+    p.type = OUSSH_PWD_REPLY;
+    p.pwd_reply.accepted = 0;
+    write(1, &p, sizeof(p));
+    exit(0);
+  }
+
+  char* file_hash = pwd_get_hash_from_file("hash_file", p.pwd_auth.username);
+  if (file_hash == NULL)
+  {
+    p.type = OUSSH_PWD_REPLY;
+    p.pwd_reply.accepted = 0;
+    write(1, &p, sizeof(p));
+    free(current_hash);
+    exit(0);
+  }
+  
+  p.type = OUSSH_PWD_REPLY;
+  warnx("fh = %s", file_hash);
+  warnx("ch = %s", current_hash);
+  p.pwd_reply.accepted = pwd_is_str_equals(file_hash, current_hash);
+  write(1, &p, sizeof(p));
+  free(file_hash);
+  free(current_hash);
+  if (!p.pwd_reply.accepted)
+  {
+    fprintf(stderr, "Bad password\n");
+    exit(0);
+  }
+}
+
 void handle_connection()
 {
   int log_fd;
   int fds = -1; // slave's file descriptor
 
+  auth_client();
   oussh_open_pt(O_RDWR, &fdm, &fds);
 
   pid_t pid = fork();

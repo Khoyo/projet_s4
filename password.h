@@ -1,5 +1,3 @@
-#define _XOPEN_SOURCE
-#define _GNU_SOURCE
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,14 +40,7 @@ int pwd_add_new_hash_in_file(const char* hash_file_path, char* new_hash);
  *                     hash else */
 char* pwd_get_hash_from_file(const char* hash_file_path, const char* username);
 
-/* pwd_demo()
- * Ask in stdin username and password, search for a matching username in
- * hashfile, and compare the hash of the given pwd to the hash in the file
- *
- * return value : -1 if error
- *                 0 if login failed
- *                 1 if login success */
-int pwd_demo();
+int pwd_is_str_equals(const char* hash1, const char* hash2);
 
 
 

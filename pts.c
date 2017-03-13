@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#define _DEFAULT_SOURCE
+#define _XOPEN_SOURCE 600
 #include "pts.h"
 
 void oussh_open_pt(int flags, int* fdm, int* fds)
