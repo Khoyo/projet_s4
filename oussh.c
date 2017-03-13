@@ -119,6 +119,7 @@ int main()
       if(p.type == OUSSH_IO)
       {
         p.io_packet.payload[p.io_packet.size] = '\0';
+        p.io_packet.size = 0;
         printf("%s", p.io_packet.payload);
         fflush(stdout);
       }
