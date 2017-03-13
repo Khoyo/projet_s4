@@ -148,7 +148,7 @@ static void fill_salt(char salt[SALT_SIZE + 1], char* hash, size_t hash_size)
  *                     hash else */
 char* pwd_get_hash_from_file(const char* hash_file_path, const char* username)
 {
-  FILE* hash_file = fopen(hash_file_path, "a+");
+  FILE* hash_file = fopen(hash_file_path, "r");
   char* line = NULL;
   size_t line_len = 0;
   ssize_t errval = -1;
