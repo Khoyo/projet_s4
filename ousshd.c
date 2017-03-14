@@ -214,7 +214,7 @@ void handle_connection()
 
 int main() {
 
-  int listen_sockfd = bind_and_listen("./unix.sock");
+  int listen_sockfd = bind_and_listen("/tmp/oussh.sock");
 
   while(1)
   {

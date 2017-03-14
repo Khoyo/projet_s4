@@ -115,7 +115,7 @@ int main()
 
   struct sockaddr_un addr;
 
-  char socket_path[] = "unix.sock";
+  char socket_path[] = "/tmp/oussh.sock";
 
   memset(&addr, 0, sizeof(addr));
   addr.sun_family = AF_UNIX;
