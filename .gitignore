@@ -35,3 +35,6 @@
 log.txt
 oussh
 ousshd
+
+id_rsa
+id_rsa.pub
