@@ -116,7 +116,7 @@ static void print_key(uint32_t* key, uint32_t len)
 
 int main()
 {
-  char data[16] = "aaaabbbbaaaabbb";
+  unsigned char data[16] = "aaaabbbbaaaabbb";
   uint32_t key[4] = {134123, 765254, 345387, 987445};
 
   printf("Key : ");
