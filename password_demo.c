@@ -75,7 +75,7 @@ int pwd_demo()
 
 int main()
 {
-  char* hash = pwd_get_hash("Max", "kek");
+  char* hash = pwd_get_hash("root", "toor");
   pwd_add_new_hash_in_file("hash_file", hash);
   if (pwd_demo() == 1)
   {
