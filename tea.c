@@ -7,7 +7,8 @@
 #define DELTA 0x9e3779b9
 
 /* encrypt()
- * Encrypt 64 bits (2 * 32 bits array) with a 128 bits key (4 * 32 bits array)
+ * Encrypt 64 bits (2 * 32 bits array) with a 128 bits key
+ * (4 * 32 bits array)
  *
  * IN/OUT v : array of two 32 bit uints to be encoded in place
  * IN     k : array of four 32 bit uints to act as key */
@@ -35,7 +36,8 @@ void tea_encrypt_one_block(uint32_t* v, uint32_t* k)
 }
 
 /* decrypt()
- * Decrypt 64 bits (2 * 32 bits array) with a 128 bits key (4 * 32 bits array)
+ * Decrypt 64 bits (2 * 32 bits array) with a 128 bits key
+ * (4 * 32 bits array)
  *
  * IN/OUT v : array of two 32 bit uints to be decoded in place
  * IN     k : array of four 32 bit uints to act as key */
@@ -103,16 +105,35 @@ static void print_array(uint8_t* array, size_t len)
   printf("\n");
 }
 
+static void print_key(uint32_t* key, uint32_t len)
+{
+  for (size_t i = 0 ; i < len ; i++)
+  {
+    printf("%d;", key[i]);
+  }
+  printf("\n");
+}
+
 int main()
 {
   char data[16] = "aaaabbbbaaaabbb";
-  uint32_t key[4] = {1, 2, 3, 4};
+  uint32_t key[4] = {134123, 765254, 345387, 987445};
 
+  printf("Key : ");
+  print_key(key, 4);
+
+  printf("Message : ");
   print_array(data, 16);
+
   tea_encrypt(data, 16, key);
+
+  printf("Encrypted message : ");
   print_array(data, 16);
   tea_decrypt(data, 16, key);
+
+  printf("Decrypted message : ");
   print_array(data, 16);
+
   return 0;
 }
 
