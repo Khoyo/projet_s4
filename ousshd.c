@@ -48,9 +48,29 @@ int bind_and_listen(char* socket_path)
   return fd;
 }
 
+char* calc_key_fingerprint(char* filename)
+{
+  FILE* f = fopen(filename, "r");
+  char* key = NULL;
+  size_t n = 0;
+  getdelim(&key, &n, 0, f);
+  char* res = crypt(key, "$5$$");
+  fprintf(stderr, "fingerprint sent: %s\n", res);
+  free(key);
+  return res;
+}
+
 void auth_client()
 {
   struct oussh_packet p;
+
+  p.type = OUSSH_BANNER;
+  
+  strncpy(p.banner.fingerprint, 
+      calc_key_fingerprint("id_rsa.pub"),
+      sizeof(p.banner.fingerprint));
+  write(1, &p, sizeof(p));
+
   read(1, &p, sizeof(p));
   if(p.type != OUSSH_PWD_AUTH)
     err(3, "bad auth packet");

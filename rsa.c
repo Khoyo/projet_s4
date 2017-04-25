@@ -1,7 +1,10 @@
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <gmp.h>
 #include <memory.h>
+#include <stdlib.h>
 #include <sys/random.h>
+#include <unistd.h>
 
 void secure_random_num(mpz_t n, size_t size, int prime)
 {
@@ -39,14 +42,14 @@ void generate_rsa_key(mpz_t n, mpz_t e, mpz_t d)
   mpz_init(gcd);
 
   mpz_set_ui(e, 65537);
-  
+
   do {
     do {
       generate_prime(p, 1024);
       generate_prime(q, 1024);
 
       mpz_mul(n, p, q);
-     
+
       mpz_sub_ui(p, p, 1u);
       mpz_sub_ui(p, q, 1u);
       mpz_lcm(lambda, p, q);
@@ -77,6 +80,23 @@ void read_key(char* filename, mpz_t n, mpz_t e_or_d)
   fclose(f);
 }
 
+char* key_fingerprint(FILE* f, mpz_t n, mpz_t e)
+{
+  char* key;
+  char salt[] = "$5$$";
+  gmp_asprintf(&key, "%#Zx\n%#Zx\n", n, e);
+  printf("%s", key);
+  char* res = crypt(key, salt);
+  printf("Your key fingerprint is %s\n", res + 4);
+  free(key);
+  return NULL;
+}
+
+/*
+void secure_alloc();
+void secure_realloc();
+void secure_free();
+*/
 
 int main()
 {
@@ -85,16 +105,17 @@ int main()
   mpz_init(e);
   mpz_init(d);
   generate_rsa_key(n, e, d);
-  mpz_out_str(stdout, 16, n);
-  printf("\n");
-  printf("\n");
+  /*mpz_out_str(stdout, 16, n);
   printf("\n");
   printf("\n");
   mpz_out_str(stdout, 16, d);
   printf("\n");
-  print_key("id_rsa", n, e);
-  print_key("id_rsa.pub", n, d);
+  printf("\n");
+  printf("\n");*/
+  print_key("id_rsa", n, d);
+  print_key("id_rsa.pub", n, e);
 
+  key_fingerprint(NULL, n, e);
   mpz_clear(n);
   mpz_clear(e);
   mpz_clear(d);

@@ -65,12 +65,15 @@ void init_ws()
 void try_auth(int fd)
 {
   char username[17];
-  char password[100];
 
   struct oussh_packet packet;
+
+  read(fd, &packet, sizeof(packet));
+  printf("Server fingerprint is %s\n", packet.banner.fingerprint + 4);
+
   packet.type = OUSSH_PWD_AUTH;
 
-  printf("Please enter your username :\n");
+  printf("username: ");
   fgets(packet.pwd_auth.username, 17, stdin);
   if (username == NULL)
   {
@@ -82,12 +85,13 @@ void try_auth(int fd)
     *p = '\0';
   }
 
-  printf("Please enter your password :\n");
-  fgets(packet.pwd_auth.password, 100, stdin);
+  char* password = getpass("password: ");
   if (password == NULL)
   {
     err(3, "scanf failed for password");
   }
+  strncpy(packet.pwd_auth.password, password, 100);
+  
   p = strchr(packet.pwd_auth.password, '\n');
   if (p != NULL)
   {

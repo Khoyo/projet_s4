@@ -3,6 +3,7 @@
 
 enum oussh_packet_type
 {
+  OUSSH_BANNER,
   OUSSH_IO,
   OUSSH_WINDOW_CHANGE,
   OUSSH_DISCONNECT,
@@ -14,6 +15,10 @@ struct oussh_packet
 {
   enum oussh_packet_type type;
   union {
+    struct oush_packet_banner
+    {
+      char fingerprint[50];
+    } banner;
     struct oush_packet_io
     {
       size_t size;
