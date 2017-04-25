@@ -1,7 +1,7 @@
 CC=gcc
 CPPFLAGS=-MMD
 CFLAGS=-Wall -Wextra -Werror -std=c99
-LDFLAGS=-lcrypt
+LDFLAGS=-lcrypt -lgmp
 
 
 all: oussh password ousshd
@@ -9,6 +9,8 @@ all: oussh password ousshd
 oussh: oussh.o pts.o password.o
 ousshd: ousshd.o pts.o password.o
 password: password.o password_demo.o
+keygen: rsa.c
+tea: tea.c
 
 .PHONY: clean
 
