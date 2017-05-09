@@ -32,6 +32,9 @@
 *.dSYM/
 *.su
 
+# Tagfiles
+TAGS
+
 log.txt
 oussh
 ousshd
