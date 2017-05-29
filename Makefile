@@ -1,7 +1,7 @@
 CC=gcc
 CPPFLAGS=-MMD
 CFLAGS=-Wall -Wextra -Werror -std=c99
-LDFLAGS=-lcrypt -lgmp
+LDLIBS=-lcrypt -lgmp
 
 
 all: oussh password ousshd
