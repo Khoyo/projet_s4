@@ -17,6 +17,6 @@ tea: tea.c
 clean:
 	rm -f *.o
 	rm -f *.d
-	rm oussh password ousshd
+	rm -f oussh password ousshd
 
 -include *.d
