@@ -109,36 +109,32 @@ void print_array(uint8_t* array, size_t len)
 int write_crypted_packet(int fd, struct oussh_packet p, uint32_t* key)
 {
     struct crypted_packet c_p;
-    fprintf(stderr, "SEND CRYPTED");
+    int r;
     memset(&c_p, 0, sizeof(struct crypted_packet));
     memcpy(&c_p, &p, sizeof(struct oussh_packet));
-
-    print_array((uint8_t*) (&p), sizeof(struct oussh_packet));
 
     if (tea_encrypt(c_p.data, sizeof(struct crypted_packet), key) != 0)
         return -1;
 
-    if (write(fd, &c_p, sizeof(struct crypted_packet) < 0))
-        return -1;
+    if ((r = write(fd, &c_p, sizeof(struct crypted_packet))) < 0)
+        return r;
 
-    return 0;
+    return r;
 }
 
 int read_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
 {
     struct crypted_packet c_p;
-    
-    fprintf(stderr, "RECV CRYPTED");
-    if (read(fd, &c_p, sizeof(struct crypted_packet)) < 0)
-        return -1;
+    int r; 
+    if ((r = read(fd, &c_p, sizeof(struct crypted_packet))) < 0)
+        return r;
+
     
     if (tea_decrypt(c_p.data, sizeof(struct crypted_packet), key) != 0)
         return -1;
 
-    print_array((uint8_t*) p, sizeof(struct oussh_packet));
-
     memcpy(p, &c_p, sizeof(struct oussh_packet));
-    return 0;
+    return r;
 }
 
 

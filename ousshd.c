@@ -143,7 +143,6 @@ void handle_connection()
     fd_set fd_in;
 
     while (1) {
-        fprintf(stderr, "Looping");
       FD_ZERO(&fd_in);
       FD_SET(0, &fd_in);
       FD_SET(fdm, &fd_in);
@@ -181,13 +180,11 @@ void handle_connection()
         if(FD_ISSET(0, &fd_in))
         {
           struct oussh_packet p;
-          fprintf(stderr, "Packet received\n");
           ioerr = read_crypted_packet(STDIN_FILENO, &p, KEY);
           if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
           if(p.type == OUSSH_IO)
           {
-              fprintf(stderr, "IO Packet received\n");
             write(log_fd, p.io_packet.payload, p.io_packet.size);
             fsync(log_fd);
             ioerr = write(fdm, p.io_packet.payload, p.io_packet.size);

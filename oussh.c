@@ -147,7 +147,6 @@ int main()
   //send_ws_packet(fd);
   while(1)
   {
-    fprintf(stderr, "Looping");
     FD_ZERO(&fd_in);
     FD_SET(0, &fd_in);
     FD_SET(fd, &fd_in);
