@@ -12,6 +12,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include "packet.h"
+#include "tea.h" 
 
 #define BUFF_SIZE sizeof(struct oussh_packet)
 
@@ -109,6 +110,44 @@ void try_auth(int fd)
   if (!packet.pwd_reply.accepted)
     errx(1, "authentification failed");
   
+}
+
+int write_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
+{
+    uint8_t* c_p;
+    size_t p_len = sizeof(struct oussh_packet);
+    size_t c_p_len = sizeof(uint32_t) * (p_len / 8 + 1);
+    c_p = malloc(c_p_len);
+    if (c_p == NULL)
+        return -1;
+    memcpy(c_p, p, p_len);
+
+    if (tea_encrypt(c_p, c_p_len, key) != 0)
+        return -1;
+
+    if (write(fd, c_p, c_p_len) != 0)
+        errx(EXIT_FAILURE, "main : write failed");
+
+    free(c_p);
+
+    return 0;
+}
+
+int read_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
+{
+    uint8_t* c_p;
+    size_t p_len = sizeof(struct oussh_packet);
+    size_t c_p_len = sizeof(uint32_t) * (p_len / 8 + 1);
+    c_p = malloc(c_p_len);
+    
+    if (read(fd, c_p, c_p_len) != 0)
+        errx(EXIT_FAILURE, "main : read failed");
+    
+    if (tea_decrypt(c_p, c_p_len, key) != 0)
+        return -1;
+
+    memcpy(p, c_p, sizeof(struct oussh_packet));
+    return 0;
 }
 
 int main()
