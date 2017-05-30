@@ -6,8 +6,8 @@ LDLIBS=-lcrypt -lgmp
 
 all: oussh password ousshd
 
-oussh: oussh.o pts.o password.o
-ousshd: ousshd.o pts.o password.o
+oussh: oussh.o pts.o password.o tea.o
+ousshd: ousshd.o pts.o password.o tea.o
 password: password.o password_demo.o
 keygen: rsa.c
 tea: tea.c
