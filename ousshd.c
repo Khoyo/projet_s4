@@ -156,7 +156,6 @@ void handle_connection()
       {
         if(FD_ISSET(fdm, &fd_in))
         {
-          write(STDERR_FILENO, " $ READ $\n", sizeof("Input : "));
           struct oussh_packet p;
           p.type = OUSSH_IO;
           ioerr = read(fdm, p.io_packet.payload, OUSSH_IO_PAYLOAD_SIZE -1);
