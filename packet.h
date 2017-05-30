@@ -1,5 +1,6 @@
-
-#define OUSSH_IO_PAYLOAD_SIZE 1024
+#include <stdint.h>
+#include "pts.h"
+#define OUSSH_IO_PAYLOAD_SIZE 32
 
 enum oussh_packet_type
 {
@@ -36,4 +37,9 @@ struct oussh_packet
       int accepted;
     } pwd_reply;
   };
+};
+
+struct crypted_packet
+{
+    uint8_t data[sizeof(uint64_t) * (sizeof(struct oussh_packet) / 8 + 1)];
 };

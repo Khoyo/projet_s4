@@ -8,3 +8,7 @@
 int tea_encrypt(uint8_t* data, uint32_t len, uint32_t* key);
 
 int tea_decrypt(uint8_t* data, uint32_t len, uint32_t* key);
+
+int write_crypted_packet(int fd, struct oussh_packet p, uint32_t* key);
+
+int read_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key);

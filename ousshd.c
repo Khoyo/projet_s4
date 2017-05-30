@@ -4,11 +4,15 @@
 #include "pts.h"
 #include "packet.h"
 #include "password.h"
+#include "tea.h"
 
 #include <sys/socket.h>
 #include <sys/un.h>
 
 #define BUFF_SIZE sizeof(struct oussh_packet)
+#define KEY (sample_key)
+
+uint32_t sample_key[4] = {1,2,3,456};
 
 int fdm = -1; // master's file descriptor
 
@@ -139,6 +143,7 @@ void handle_connection()
     fd_set fd_in;
 
     while (1) {
+        fprintf(stderr, "Looping");
       FD_ZERO(&fd_in);
       FD_SET(0, &fd_in);
       FD_SET(fdm, &fd_in);
@@ -152,7 +157,7 @@ void handle_connection()
       {
         if(FD_ISSET(fdm, &fd_in))
         {
-          //write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
+          write(STDERR_FILENO, " $ READ $\n", sizeof("Input : "));
           struct oussh_packet p;
           p.type = OUSSH_IO;
           ioerr = read(fdm, p.io_packet.payload, OUSSH_IO_PAYLOAD_SIZE -1);
@@ -163,7 +168,7 @@ void handle_connection()
             //tcsetattr(0, TCSANOW, &orig_external_term_settings);
             //err(EXIT_FAILURE, "main : read failed");
             p.type = OUSSH_DISCONNECT;
-            write(1, &p, sizeof(p));
+            write_crypted_packet(1, p, KEY);
             fprintf(stderr, "ousshd: Exiting\n");
             close(0);
             close(1);
@@ -171,16 +176,18 @@ void handle_connection()
             exit(0);
           }
 
-          write(1, &p, sizeof(p));
+          write_crypted_packet(1, p, KEY);
         }
         if(FD_ISSET(0, &fd_in))
         {
           struct oussh_packet p;
-          ioerr = read(STDIN_FILENO, &p, sizeof(p));
+          fprintf(stderr, "Packet received\n");
+          ioerr = read_crypted_packet(STDIN_FILENO, &p, KEY);
           if (ioerr < 0) { errx(EXIT_FAILURE, "main : read failed"); }
 
           if(p.type == OUSSH_IO)
           {
+              fprintf(stderr, "IO Packet received\n");
             write(log_fd, p.io_packet.payload, p.io_packet.size);
             fsync(log_fd);
             ioerr = write(fdm, p.io_packet.payload, p.io_packet.size);

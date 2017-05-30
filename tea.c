@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <linux/random.h>
+#include "packet.h"
 
 #define SUM 0xc6ef3720
 #define DELTA 0x9e3779b9
@@ -96,16 +97,54 @@ int tea_decrypt(uint8_t* data, uint32_t len, uint32_t* key)
   return 0;
 }
 
-static void print_array(uint8_t* array, size_t len)
+void print_array(uint8_t* array, size_t len)
 {
   for (size_t i = 0 ; i < len ; i++)
   {
-    printf("%c", array[i]);
+    fprintf(stderr, "%x", array[i]);
   }
-  printf("\n");
+  fprintf(stderr, "\n");
 }
 
-static void print_key(uint32_t* key, uint32_t len)
+int write_crypted_packet(int fd, struct oussh_packet p, uint32_t* key)
+{
+    struct crypted_packet c_p;
+    fprintf(stderr, "SEND CRYPTED");
+    memset(&c_p, 0, sizeof(struct crypted_packet));
+    memcpy(&c_p, &p, sizeof(struct oussh_packet));
+
+    print_array((uint8_t*) (&p), sizeof(struct oussh_packet));
+
+    if (tea_encrypt(c_p.data, sizeof(struct crypted_packet), key) != 0)
+        return -1;
+
+    if (write(fd, &c_p, sizeof(struct crypted_packet) < 0))
+        return -1;
+
+    return 0;
+}
+
+int read_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
+{
+    struct crypted_packet c_p;
+    
+    fprintf(stderr, "RECV CRYPTED");
+    if (read(fd, &c_p, sizeof(struct crypted_packet)) < 0)
+        return -1;
+    
+    if (tea_decrypt(c_p.data, sizeof(struct crypted_packet), key) != 0)
+        return -1;
+
+    print_array((uint8_t*) p, sizeof(struct oussh_packet));
+
+    memcpy(p, &c_p, sizeof(struct oussh_packet));
+    return 0;
+}
+
+
+
+/*
+static void print_tea_key(uint32_t* key, uint32_t len)
 {
   for (size_t i = 0 ; i < len ; i++)
   {
@@ -113,6 +152,7 @@ static void print_key(uint32_t* key, uint32_t len)
   }
   printf("\n");
 }
+*/
 
 /*
 int main()

@@ -15,6 +15,9 @@
 #include "tea.h" 
 
 #define BUFF_SIZE sizeof(struct oussh_packet)
+#define KEY (sample_key)
+
+uint32_t sample_key[4] = {1,2,3,456};
 
 int socket_fd;
 void send_ws_packet(int fd)
@@ -23,7 +26,7 @@ void send_ws_packet(int fd)
   struct oussh_packet p;
   p.type = OUSSH_WINDOW_CHANGE;
   p.window_change_packet.ws = ws;
-  write(fd, &p, sizeof(p));
+  write_crypted_packet(fd, p, KEY);
 }
 
 static void sigwinch_handler(int signum)
@@ -112,44 +115,6 @@ void try_auth(int fd)
   
 }
 
-int write_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
-{
-    uint8_t* c_p;
-    size_t p_len = sizeof(struct oussh_packet);
-    size_t c_p_len = sizeof(uint32_t) * (p_len / 8 + 1);
-    c_p = malloc(c_p_len);
-    if (c_p == NULL)
-        return -1;
-    memcpy(c_p, p, p_len);
-
-    if (tea_encrypt(c_p, c_p_len, key) != 0)
-        return -1;
-
-    if (write(fd, c_p, c_p_len) != 0)
-        errx(EXIT_FAILURE, "main : write failed");
-
-    free(c_p);
-
-    return 0;
-}
-
-int read_crypted_packet(int fd, struct oussh_packet* p, uint32_t* key)
-{
-    uint8_t* c_p;
-    size_t p_len = sizeof(struct oussh_packet);
-    size_t c_p_len = sizeof(uint32_t) * (p_len / 8 + 1);
-    c_p = malloc(c_p_len);
-    
-    if (read(fd, c_p, c_p_len) != 0)
-        errx(EXIT_FAILURE, "main : read failed");
-    
-    if (tea_decrypt(c_p, c_p_len, key) != 0)
-        return -1;
-
-    memcpy(p, c_p, sizeof(struct oussh_packet));
-    return 0;
-}
-
 int main()
 {
   signal(SIGPIPE, sigpipe_handler);
@@ -182,6 +147,7 @@ int main()
   //send_ws_packet(fd);
   while(1)
   {
+    fprintf(stderr, "Looping");
     FD_ZERO(&fd_in);
     FD_SET(0, &fd_in);
     FD_SET(fd, &fd_in);
@@ -198,7 +164,7 @@ int main()
     {
       //write(STDOUT_FILENO, " $ READ $\n", sizeof("Input : "));
       struct oussh_packet p;
-      ioerr = read(fd, &p, sizeof(p));
+      ioerr = read_crypted_packet(fd, &p, KEY);
       if (ioerr < 0)
       {
         tcsetattr(0, TCSANOW, &orig_external_term_settings);
@@ -232,7 +198,7 @@ int main()
       //write(log_fd, buffer, ioerr);
       //fsync(log_fd);
       //ioerr = write(1, "rcv", 4);
-      ioerr = write(fd, &p, sizeof(p));
+      ioerr = write_crypted_packet(fd, p, KEY);
       if (ioerr < 0) { errx(EXIT_FAILURE, "main : write failed"); }
       init_ws();
     }
