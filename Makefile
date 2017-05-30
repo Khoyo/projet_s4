@@ -3,13 +3,14 @@ CPPFLAGS=-MMD
 CFLAGS=-Wall -Wextra -Werror -std=c99
 LDLIBS=-lcrypt -lgmp
 
+BINARIES = oussh password ousshd keygen
 
-all: oussh password ousshd
+all: $(BINARIES)
 
-oussh: oussh.o pts.o password.o tea.o
-ousshd: ousshd.o pts.o password.o tea.o
+oussh: oussh.o pts.o password.o  rsa.o
+ousshd: ousshd.o pts.o password.o rsa.o
 password: password.o password_demo.o
-keygen: rsa.c
+keygen: rsa.o keygen.o
 tea: tea.c
 
 .PHONY: clean
@@ -17,6 +18,6 @@ tea: tea.c
 clean:
 	rm -f *.o
 	rm -f *.d
-	rm -f oussh password ousshd
+	rm -f $(BINARIES)
 
 -include *.d

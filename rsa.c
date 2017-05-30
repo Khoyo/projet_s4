@@ -80,7 +80,75 @@ void read_key(char* filename, mpz_t n, mpz_t e_or_d)
   fclose(f);
 }
 
-char* key_fingerprint(FILE* f, mpz_t n, mpz_t e)
+struct rsa_payload
+{
+  size_t size;
+  size_t capacity;
+  char* data;
+};
+
+struct rsa_payload new_rsa_payload()
+{
+  return (struct rsa_payload) {0, 1024, malloc(1024)};
+}
+
+void free_rsa_payload(struct rsa_payload* p)
+{
+  p->size = 0;
+  p->capacity = 0;
+  free(p->data);
+  p->data = NULL;
+}
+
+void add_data_to_rsa_payload(struct rsa_payload* p, char* data, size_t len)
+{
+  if(p->capacity < (p->size + len))
+  {
+    p->data = realloc(p->data, (p->size + len)*2);
+    p->capacity = (p->size + len) * 2;
+  }
+  memcpy(p->data + p->size, data, len);
+  p->size += len;
+}
+
+void rsa_crypt_block(char* buffer, size_t size, char** out, size_t* out_size, mpz_t n, mpz_t e)
+{
+  mpz_t m;
+  mpz_t c;
+  mpz_init(m);
+  mpz_init(c);
+  mpz_import(n, size, 1, 1, 0, 0, buffer);
+  mpz_powm(c, m, e, n);
+  *out = mpz_export(NULL, out_size, 1, 1, 0, 0, c);
+  mpz_clear(c);
+  mpz_clear(m);
+}
+
+struct rsa_payload rsa_crypt(char* buffer, size_t size, mpz_t n, mpz_t e)
+{
+  size_t i = 0;
+
+  struct rsa_payload payload = new_rsa_payload();
+
+  for (; i + 1024 < size; i += 1024)
+  {
+    size_t tmp;
+    char* new_cipher;
+    rsa_crypt_block(buffer + i, 1024, &new_cipher, &tmp, n, e);
+    add_data_to_rsa_payload(&payload, new_cipher, tmp);
+  }
+  if(i < size)
+  {
+    size_t tmp;
+    char* new_cipher;
+    rsa_crypt_block(buffer+i, size - i, &new_cipher, &tmp, n, e);
+    add_data_to_rsa_payload(&payload, new_cipher, tmp);
+  }
+  return payload;
+}
+
+
+char* key_fingerprint(mpz_t n, mpz_t e)
 {
   char* key;
   char salt[] = "$5$$";
@@ -89,35 +157,7 @@ char* key_fingerprint(FILE* f, mpz_t n, mpz_t e)
   char* res = crypt(key, salt);
   printf("Your key fingerprint is %s\n", res + 4);
   free(key);
-  return NULL;
+  return key;
 }
 
-/*
-void secure_alloc();
-void secure_realloc();
-void secure_free();
-*/
-
-int main()
-{
-  mpz_t n, d, e;
-  mpz_init(n);
-  mpz_init(e);
-  mpz_init(d);
-  generate_rsa_key(n, e, d);
-  /*mpz_out_str(stdout, 16, n);
-  printf("\n");
-  printf("\n");
-  mpz_out_str(stdout, 16, d);
-  printf("\n");
-  printf("\n");
-  printf("\n");*/
-  print_key("id_rsa", n, d);
-  print_key("id_rsa.pub", n, e);
-
-  key_fingerprint(NULL, n, e);
-  mpz_clear(n);
-  mpz_clear(e);
-  mpz_clear(d);
-}
 
